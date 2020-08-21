@@ -1,5 +1,6 @@
 const express = require('express')
 const xss = require('xss')
+const path = require('path')
 const ArticlesService = require('./articles-service')
 
 const articlesRouter = express.Router()
@@ -39,7 +40,7 @@ articlesRouter
       .then(article => {
         res
           .status(201)
-          .location(`articles/${article.id}`)
+          .location(path.posix.join(req.originalUrl + `/${article.id}`))
           .json(sanitizedArticle(article))
       })
       .catch(next)
@@ -71,6 +72,23 @@ articlesRouter
   })
   .delete((req, res, next) => {
     ArticlesService.deleteArticle(req.app.get('db'), req.params.article_id)
+      .then(() => {
+        res.status(204).end()
+      })
+      .catch(next)
+  })
+  .patch(jsonParser, (req, res, next) => {
+    const { title, content, style } = req.body
+    const articleToUpdate = { title, content, style}
+
+    const numberOfValues = Object.values(articleToUpdate).filter(Boolean).length
+    if(numberOfValues === 0) {
+      return res.status(400).json({
+        error: { message: 'Request body must contain either \'title\', \'style\', or \'content\''}
+      })
+    }
+
+    ArticlesService.updateArticle(req.app.get('db'), req.params.article_id, articleToUpdate)
       .then(() => {
         res.status(204).end()
       })
