@@ -70,7 +70,8 @@ articlesRouter
       style: res.article.style,
       title: xss(res.article.title),
       content: xss(res.article.content),
-      date_published: res.article.date_published
+      date_published: res.article.date_published,
+      author: res.article.author
     })
   })
   .delete((req, res, next) => {

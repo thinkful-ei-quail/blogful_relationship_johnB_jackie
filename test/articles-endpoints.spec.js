@@ -13,7 +13,7 @@ describe('Articles Endpoints', () => {
       client: 'pg',
       connection: process.env.TEST_DB_URL,
     })
-    app.set('db',db)
+    app.set('db', db)
   })
 
   after('disconnect from db', () => db.destroy())
