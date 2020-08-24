@@ -5,7 +5,7 @@ const supertest = require('supertest')
 const { expect } = require('chai')
 const { makeUsersArray } = require('./users.fixtures')
 
-describe.only('Articles Endpoints', () => {
+describe('Articles Endpoints', () => {
   let db
 
   before('make knex instance', () => {
@@ -54,11 +54,17 @@ describe.only('Articles Endpoints', () => {
       })
     })
     context('Given XSS attack article', () => {
+      const testUsers = makeUsersArray()
       const { maliciousArticle, expectedArticle } = makeMaliciousArticle()
 
       beforeEach('Insert malicious article', () => {
-        return db('blogful_articles')
-          .insert([ maliciousArticle ])
+        return db('blogful_users')
+          .insert( testUsers )
+          .then(() => {
+            return db
+              .into('blogful_articles')
+              .insert([ maliciousArticle ])
+          })
       })
       
       it('Removes XSS attack content', () => {
@@ -104,12 +110,18 @@ describe.only('Articles Endpoints', () => {
       })
     })
     context('Given an XSS attack article', () => {
+      const testUsers = makeUsersArray()
       const { maliciousArticle, expectedArticle } = makeMaliciousArticle()
       
       beforeEach('insert malicious article', () => {
         return db
-          .into('blogful_articles')
-          .insert([ maliciousArticle ])
+          .into('blogful_users')
+          .insert(testUsers)
+          .then(() => {
+            return db
+            .into('blogful_articles')
+            .insert([ maliciousArticle ])
+          })
       })
 
       it('removes XSS attack content', () => {
@@ -124,7 +136,14 @@ describe.only('Articles Endpoints', () => {
     })
   })
   describe('POST /api/articles', () => {
-    it.only('Creates an article, responding with 201 and the new article', function() {
+    const testUsers = makeUsersArray();
+    beforeEach('insert malicious article', () => {
+      return db
+        .into('blogful_users')
+        .insert(testUsers)
+    })
+
+    it('Creates an article, responding with 201 and the new article', function() {
       this.retries(3)
       const newArticle = {
         title: 'Test new article',
@@ -141,14 +160,14 @@ describe.only('Articles Endpoints', () => {
           expect(res.body.content).to.eql(newArticle.content)
           expect(res.body).to.have.property('id')
           expect(res.headers.location).to.eql(`/api/articles/${res.body.id}`)
-          const expected = new Date().toLocaleDateString()
-          const actual = new Date(res.body.date_published).toLocaleDateString()
+          const expected = new Intl.DateTimeFormat('en-US').format(new Date())
+          const actual = new Intl.DateTimeFormat('en-US').format(new Date(res.body.date_published))
           expect(actual).to.eql(expected)
         })
-        .then(postRes => 
+        .then(res => 
           supertest(app)
-            .get(`/api/articles/${postRes.body.id}`)
-            .expect(postRes.body)  
+            .get(`/api/articles/${res.body.id}`)
+            .expect(res.body)  
         )
     })
     const requiredFields = ['title', 'content', 'style']
@@ -229,7 +248,7 @@ describe.only('Articles Endpoints', () => {
       it('Responds with 404', () => {
         const articleId = 123456
         return supertest(app)
-          .patch(`/api/articles/${articleId}`)
+          .delete(`/api/articles/${articleId}`)
           .expect(404, {
             error: { message: 'Article doesn\'t exist'}
           })
@@ -291,7 +310,8 @@ describe.only('Articles Endpoints', () => {
         }
         return supertest(app)
           .patch(`/api/articles/${idToUpdate}`)
-          .send(updateArticle)
+          .send({...updateArticle,
+            fieldToIgnore: 'should not be in GET response'})
           .expect(204)
           .then(res => 
               supertest(app)
