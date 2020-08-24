@@ -206,7 +206,7 @@ describe.only('Articles Endpoints', () => {
       })
     })
   })
-  describe.only('PATCH /api/articles/:article_id', () => {
+  describe('PATCH /api/articles/:article_id', () => {
     context('Given no articles', () => {
       it('Responds with 404', () => {
         const articleId = 123456
